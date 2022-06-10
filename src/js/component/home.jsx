@@ -1,23 +1,26 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import React, { useEffect } from "react";
 let initialState = { label: "", done: false };
 
 const Home = () => {
-	const [newtask, setnewtask] = useState("");
-	const [task, settasks] = useState([]);
+	const [task, setTask] = useState(initialState);
+	const [list, setList] = useState([]);
 	const [error, setError] = useState(false);
-	let URL_BASE = "https://assets.breatheco.de/apis/fake/todos/user";
+	const user = localStorage.getItem("user") || "";
+	let URL_BASE = "https://assets.breatheco.de/apis/fake/todos/user/";
 
+	// starting Fetch
 	let getApi = async () => {
 		try {
 			let response = await fetch(`${URL_BASE}deinys`);
 			let data = await response.json();
-			settasks(data);
-			console.log(task);
+			setList(data);
+			console.log(list);
 		} catch (error) {}
 	};
 
 	let addListApi = async () => {
-		if (newtask.label.trim() == "") {
+		if (task.label.trim() == "") {
 			setError(true);
 		}
 		try {
@@ -26,11 +29,11 @@ const Home = () => {
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify([...newtask, task]),
+				body: JSON.stringify([...list, task]),
 			});
 			if (response.ok) {
 				getApi();
-				settasks({ ...task, ["label"]: "" });
+				setTask({ ...task, ["label"]: "" });
 			} else {
 				console.log(response.status);
 			}
@@ -57,6 +60,7 @@ const Home = () => {
 			console.log(error);
 		}
 	};
+
 	let deleteUser = async () => {
 		try {
 			let response = await fetch(`${URL_BASE}deinys`, {
@@ -72,6 +76,28 @@ const Home = () => {
 			console.log(error);
 		}
 	};
+	//Finishing fetch
+
+	const handleTask = (event) => {
+		setTask({ ...task, [event.target.name]: event.target.value });
+	};
+
+	const deleteTask = (id) => {
+		let newList = list.filter((item, index) => index != id);
+		setList(newList);
+	};
+
+	const handleKey = (event) => {
+		if (event.key === "Enter") {
+			if (task.label.trim() == "") {
+				setError(true);
+			} else {
+				setList([...list, task]);
+				setTask({ ...task, ["label"]: "" });
+				setError(false);
+			}
+		}
+	};
 
 	function addtask() {
 		settasks([...task, newtask]);
@@ -85,44 +111,79 @@ const Home = () => {
 		settasks(duplicatearray);
 	}
 
-	const tasklist = task.map((object, index) => {
-		return (
-			<div className="row justify-content-center">
-				<h1 className="col-md-6 text-left">{object}</h1>
-				<button
-					onClick={() => {
-						deletask(index);
-					}}
-					className="col-md-1 btn btn-danger m-1">
-					Delete
-				</button>
-			</div>
-		);
-	});
-
+	useEffect(() => {
+		if (user == "") {
+			createUser();
+		} else {
+			getApi();
+		}
+	}, []);
 	return (
 		<div className="home">
-			<div className="container-sm">
+			<div className="container-sm justify-content-center">
 				<h1 className="header">todos</h1>
 				<div className="row justify-content-center">
 					<input
 						type="text"
-						placeholder="What needs to be done?"
-						className=" col-md-6 m-1"
-						value={newtask}
-						onChange={(e) => {
-							setnewtask(e.target.value);
-						}}
+						className="form-control bg-light entry"
+						placeholder="Add a new task"
+						aria-describedby="button-addon2"
+						value={task.label}
+						onChange={handleTask}
+						onKeyUp={handleKey}
+						name="label"
 					/>
 					<button
-						onClick={addtask}
+						onClick={addListApi}
 						className="btn btn-primary col-md-2 m-1">
-						Add Task
+						Add List
 					</button>
 				</div>
-				{tasklist}
 			</div>
-			<div className="count">{tasklist.length} item left</div>
+			{error && (
+				<div
+					className="alert alert-danger d-flex align-items-center"
+					role="alert">
+					<div>You must to add a task</div>
+				</div>
+			)}
+			<div className="card-body">
+				<div className="card-text">
+					{list.map((item, index) => {
+						return (
+							<p
+								key={index}
+								className="d-flex justify-content-between tarea">
+								{item.label}
+								<button
+									type="button"
+									className="btn-close"
+									aria-label="Close"
+									onClick={() => deleteTask(index)}></button>
+							</p>
+						);
+					})}
+					{list.length} task(s) left
+				</div>
+				<div className=" row justify-content-center">
+					<button
+						type="button"
+						className="btn btn-primary col-md-2 m-1"
+						onClick={() => {
+							getApi();
+						}}>
+						Recover all the store task
+					</button>
+					<button
+						type="button"
+						className="btn btn-danger col-md-2 m-1"
+						onClick={() => {
+							deleteUser();
+						}}>
+						Delete all
+					</button>
+				</div>
+			</div>
 		</div>
 	);
 };
